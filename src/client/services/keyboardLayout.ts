@@ -1,6 +1,5 @@
 import {IKeyLayout} from "../UI/game/_types/IKeyLayout";
 import {Field} from "model-react";
-import {Observer} from "./Observer";
 
 export const keyboardLayouts: Record<string, IKeyLayout> = {
     qwerty: [
@@ -11,7 +10,7 @@ export const keyboardLayouts: Record<string, IKeyLayout> = {
     azerty: [
         ["a", "z", "e", "r", "t", "y", "u", "i", "o", "p"],
         ["q", "s", "d", "f", "g", "h", "j", "k", "l", "m"],
-        ["enter", "w", "x", "x", "v", "b", "n", "backspace"],
+        ["enter", "w", "x", "c", "v", "b", "n", "backspace"],
     ],
 };
 

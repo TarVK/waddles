@@ -292,6 +292,7 @@ class Room {
                 this.setState({
                     status: "showingWinner",
                     winnerID: winner === null || winner === void 0 ? void 0 : winner.getID(),
+                    word: this.word,
                 });
                 if (winner) {
                     winner.setScore(winner.getScore() + 1);

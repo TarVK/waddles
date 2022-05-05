@@ -47,7 +47,7 @@ export class ApplicationClass extends SocketModel {
             const lists = getWordLists();
             const list =
                 lists.find(l => l.name == prevName) ??
-                lists.find(l => l.name == "english-5") ??
+                lists.find(l => l.name == "english-5 wordle") ??
                 lists[0];
 
             try {

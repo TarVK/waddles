@@ -18,7 +18,7 @@ export const OwnView: FC = () => {
     const [isShaking, setShaking] = useState(false);
     const shake = useCallback(() => {
         setShaking(true);
-        setTimeout(() => setShaking(false), 1000);
+        setTimeout(() => setShaking(false), 500);
     }, []);
 
     const processKey = useCallback(

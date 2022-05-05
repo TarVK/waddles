@@ -144,6 +144,15 @@ export class Room extends SocketModel {
     }
 
     /**
+     * Retrieves the word that was supposed to be guessed
+     * @param hook The data hook to subscribe to changes
+     * @returns Either the word if it is revealed, or null
+     */
+    public getWord(hook: IDataHook): string | null {
+        return this.state.get(hook).word ?? null;
+    }
+
+    /**
      * Retrieves the admin of the room
      * @param hook The data hook to subscribe to changes
      * @returns The admin

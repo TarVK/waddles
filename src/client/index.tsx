@@ -11,6 +11,7 @@ initializeIcons();
 const theme = getTheme();
 render(
     <ThemeProvider theme={theme}>
+        <title>Waddles</title>
         <App />
         <NotificationDisplayer />
     </ThemeProvider>,

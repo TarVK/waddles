@@ -52,6 +52,8 @@ export const Attempts: FC<{
         extraSmall: 100,
     }[size];
     let rowShook = false;
+
+    const attemptBarrier = 10; // WHen more max attempts are allowed, they won't be shown until reached
     return (
         <div
             ref={setRef}
@@ -71,34 +73,40 @@ export const Attempts: FC<{
                 padding: 2,
                 width: resize ? undefined : width,
             }}>
-            {genList(maxAttempts > 20 ? attempts.length : maxAttempts, i => {
-                let attempt = attempts[i];
-                if (!attempt) attempt = genList(wordLength, () => ({type: "unknown"}));
+            {genList(
+                maxAttempts > attemptBarrier
+                    ? Math.max(attempts.length + 1, attemptBarrier)
+                    : maxAttempts,
+                i => {
+                    let attempt = attempts[i];
+                    if (!attempt)
+                        attempt = genList(wordLength, () => ({type: "unknown"}));
 
-                let shouldShake = false;
-                if (shake && !rowShook && attempt[0].type == "unknown") {
-                    rowShook = true;
-                    shouldShake = true;
+                    let shouldShake = false;
+                    if (shake && !rowShook && attempt[0].type == "unknown") {
+                        rowShook = true;
+                        shouldShake = true;
+                    }
+
+                    return (
+                        <Attempt
+                            key={i}
+                            attempt={attempt}
+                            size={size}
+                            scrollTo={scrollTo}
+                            index={maxAttempts > 6 ? i + 1 : undefined}
+                            shake={shouldShake}
+                        />
+                    );
                 }
-
-                return (
-                    <Attempt
-                        key={i}
-                        attempt={attempt}
-                        size={size}
-                        scrollTo={scrollTo}
-                        index={i + 1}
-                        shake={shouldShake}
-                    />
-                );
-            })}
+            )}
         </div>
     );
 };
 
 export const Attempt: FC<{
     attempt: IAttempt;
-    index: number;
+    index?: number;
     size?: IViewSize;
     shake?: boolean;
     scrollTo?: (element: HTMLElement) => void;
@@ -130,7 +138,7 @@ export const Attempt: FC<{
                 gap: size == "extraSmall" ? 4 : theme.spacing.s1,
             }}>
             {attempt.map(({letter, type}, i) => {
-                const showIndex = type == "unknown" && i == 0 && !letter;
+                const showIndex = type == "unknown" && i == 0 && !letter && index;
                 return (
                     <div
                         key={i}
