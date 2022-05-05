@@ -8,5 +8,5 @@ export const useIsMobileView = (): boolean => {
         return () => window.removeEventListener("resize", listener);
     });
 
-    return window.innerWidth < 700 || window.innerHeight < 600; //TODO: boundaries to be decided
+    return window.innerWidth < 1100 || window.innerHeight < 600; //TODO: boundaries to be decided
 };

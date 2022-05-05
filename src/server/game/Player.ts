@@ -2,8 +2,9 @@ import {AsyncSocketConnection} from "../AsyncSocketConnection";
 import {uuid} from "uuidv4";
 import {Room} from "./Room";
 import {IPlayerData} from "../../_types/game/IPlayerData";
-import {AnswerCard} from "./cards/AnswerCard";
 import {withErrorHandling} from "../services/withErrorHandling";
+import {IAttempt} from "../../_types/game/IAttempt";
+import {IError} from "../../_types/game/IError";
 
 export class Player {
     protected ID: string = uuid();
@@ -15,9 +16,13 @@ export class Player {
     // The room this player is currently in
     protected room: Room | null;
 
+    /** The score in the current match */
     protected score = 0;
-    protected hand = [] as AnswerCard[];
-    protected selection = [] as AnswerCard[];
+    /** The score across matches */
+    protected totalScore = 0;
+
+    /** The current attempts of this player */
+    protected attempts: IAttempt[] = [];
 
     /**
      * Creates a new player from a socket
@@ -39,10 +44,18 @@ export class Player {
                 return {success: true};
             })
         );
-        this.socket.on(`players/${this.ID}/setSelection`, (selection: string[]) =>
+        this.socket.on(`players/${this.ID}/addAttempt`, (attempt: string) =>
             withErrorHandling(() => {
-                this.setSelection(selection);
-                return {success: true};
+                if (!this.room)
+                    return {
+                        success: false,
+                        errorMessage: "You must be in a room to enter attempts",
+                        errorCode: 5,
+                    };
+                const scoring = this.room.rate(attempt);
+                this.addAttempt(scoring);
+                this.room.checkPlayerAttempts(this);
+                return {success: true, scoring: scoring};
             })
         );
 
@@ -57,16 +70,13 @@ export class Player {
     public share(player: Player): void {
         player.getSocket().on(
             `players/${this.ID}/retrieve`,
-            (): IPlayerData =>
+            (): IPlayerData | IError =>
                 withErrorHandling(() => ({
                     ID: this.ID,
                     name: this.name,
                     score: this.score,
-                    selection: this.selection.map(card => card.getText()),
-                    hand:
-                        player == this
-                            ? this.hand.map(card => card.getText())
-                            : undefined,
+                    totalScore: this.totalScore,
+                    attempts: this.attempts,
                 })),
             this.ID
         );
@@ -114,19 +124,19 @@ export class Player {
     }
 
     /**
-     * Retrieves the hand of the player
-     * @returns The hand
+     * Retrieves the score of this player throughout the entire game
+     * @returns The total score
      */
-    public getHand(): AnswerCard[] {
-        return this.hand;
+    public getTotalScore(): number {
+        return this.totalScore;
     }
 
     /**
-     * Retrieves the selection of the player
-     * @returns The selection
+     * Retrieves the attempts of the player
+     * @returns The player's attempts
      */
-    public getSelection(): AnswerCard[] {
-        return this.selection;
+    public getAttempts(): IAttempt[] {
+        return this.attempts;
     }
 
     /**
@@ -135,6 +145,15 @@ export class Player {
      */
     public getRoom(): Room | null {
         return this.room;
+    }
+
+    /**
+     * Whether this player successfully guessed the word
+     * @returns Whether the word was guessed
+     */
+    public guessedWord(): boolean {
+        const lastAttempt = this.attempts[this.attempts.length - 1];
+        return lastAttempt.every(l => l.type == "matches");
     }
 
     // Setters
@@ -172,51 +191,29 @@ export class Player {
     }
 
     /**
-     * Sets the selected cards of the player
-     * @param selection The new selection
+     * Sets the total score of this player
+     * @param totalScore The new total score
      */
-    public setSelection(selection: string[] | AnswerCard[]): void {
-        const allCards = [...this.hand, ...this.selection];
-        if (typeof selection[0] == "string") {
-            this.selection = (selection as string[])
-                .map(card => allCards.find(c => c.getText() == card))
-                .filter(card => card != null) as AnswerCard[];
-        } else {
-            this.selection = (selection as AnswerCard[]).filter(card =>
-                allCards.includes(card)
-            );
-        }
-
-        this.broadcast(
-            `players/${this.ID}/setSelection`,
-            this.selection.map(card => card.getText())
-        );
-
-        // Update the hand to not include the selection
-        this.setHand(allCards.filter(card => !this.selection.includes(card)));
+    public setTotalScore(totalScore: number): void {
+        this.totalScore = totalScore;
+        this.broadcast(`players/${this.ID}/setTotalScore`, totalScore);
     }
 
     /**
-     * Clears the selected cards of the player
+     * Adds an attempt for this player
+     * @param attempt The attempt to be added
      */
-    public clearSelection(): void {
-        this.selection = [];
-        this.broadcast(
-            `players/${this.ID}/setSelection`,
-            this.selection.map(card => card.getText())
-        );
+    public addAttempt(attempt: IAttempt): void {
+        this.setAttempts([...this.attempts, attempt]);
     }
 
     /**
-     * Sets the hand of the player
-     * @param hand The new hand
+     * Sets the current attempts for this player
+     * @param attempts The attempts to be set
      */
-    public setHand(hand: AnswerCard[]): void {
-        this.hand = hand;
-        this.getSocket().emit(
-            `players/${this.ID}/setHand`,
-            this.hand.map(card => card.getText())
-        );
+    public setAttempts(attempts: IAttempt[]): void {
+        this.attempts = attempts;
+        this.broadcast(`players/${this.ID}/setAttempts`, this.attempts);
     }
 
     // Utility

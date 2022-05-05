@@ -48,7 +48,7 @@ export class SocketField<T, S extends ISerializer<any, any> = ISerializer<T, T>>
     public async set(value: T): Promise<ISocketResponse> {
         return this.changeState.addAction(async () => {
             try {
-                const resp = await this.socket.emitAsync(
+                const resp: any = await this.socket.emitAsync(
                     this.message,
                     this.channel.serialize(value)
                 );

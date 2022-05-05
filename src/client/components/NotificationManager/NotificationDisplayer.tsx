@@ -7,7 +7,7 @@ import {useDataHook} from "model-react";
 export const NotificationDisplayer: FC = () => {
     const [h] = useDataHook();
     return (
-        <div css={{position: "fixed", left: 16, bottom: 16}}>
+        <div css={{position: "fixed", left: 16, top: 16}}>
             {NotificationManager.getNotifications(h).map(notification => (
                 <Surface key={notification.key as any} css={{marginBottom: 16}}>
                     {notification}

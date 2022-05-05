@@ -2,26 +2,27 @@ import {jsx} from "@emotion/core";
 import {FC, useState, useEffect} from "react";
 import {useDataHook} from "model-react";
 import {Application} from "../model/Application";
-import {Hand} from "./handCards/Hand";
 import {DefaultLoaderSwitch} from "../components/DefaultLoaderSwitch";
 import {useIsMobileView} from "../services/useIsMobileView";
 import {PlayerList} from "./playerList/PlayerList";
 import {RoomData} from "./room/RoomData";
-import {PlayedCards} from "./playedCards/PlayedCards";
-import {Judging} from "./judging/Judging";
 import {useTheme} from "../services/useTheme";
 import {Surface} from "../components/Surface";
 import {Player} from "../model/game/Player";
 import {createToast} from "../components/NotificationManager/createToast";
 import {MessageBarType, Panel, PanelType, IconButton} from "@fluentui/react";
 import {useSyncState} from "../services/useSyncState";
+import {OwnView} from "./game/OwnView";
+import {PlayerViews} from "./game/PlayerViews";
+import {RoundWinScreen} from "./controls/RoundWinScreen";
+import {MatchWinScreen} from "./controls/MatchWinScreen";
+import {EnterWordScreen} from "./controls/EnterWordScreen";
+import {Github} from "../components/Github";
 
 export const App: FC = () => {
     const [h, c] = useDataHook();
     const player = Application.getPlayer(h);
     const room = Application.getRoom(h);
-    const answering = room?.getAnsweringPlayers(h).find(({player: p}) => p.is(player));
-    const isRevealed = room?.isRevealed(h);
 
     useEffect(() => {
         const listener = (kicked: Player) => {
@@ -38,12 +39,13 @@ export const App: FC = () => {
     }, [room]);
 
     const theme = useTheme();
-    const [isMenuOpen, setMenuOpen] = useSyncState(
-        player?.getHand(h).length == 0 || false
-    );
+    const [isMenuOpen, setMenuOpen] = useSyncState(false);
     if (useIsMobileView())
         return (
             <DefaultLoaderSwitch {...c}>
+                <EnterWordScreen />
+                <RoundWinScreen />
+                <MatchWinScreen />
                 <IconButton
                     iconProps={{iconName: "GlobalNavButton"}}
                     styles={{
@@ -69,26 +71,12 @@ export const App: FC = () => {
                         minWidth: 0,
                         display: "flex",
                         flexDirection: "column",
+                        "> *": {
+                            flex: 1,
+                        },
                     }}>
-                    <div>
-                        <Judging />
-                    </div>
-                    <div
-                        css={{
-                            flexGrow: 4,
-                            overflow: "auto",
-                            ...(!isRevealed && {flexShrink: 0}),
-                        }}>
-                        <PlayedCards />
-                    </div>
-                    <div
-                        css={{
-                            overflow: "auto",
-                            ...(!isRevealed && answering && {minHeight: 100}),
-                            boxShadow: theme.effects.elevation64,
-                        }}>
-                        <Hand />
-                    </div>
+                    <PlayerViews />
+                    <OwnView />
                 </div>
                 <Panel
                     isOpen={isMenuOpen}
@@ -112,12 +100,16 @@ export const App: FC = () => {
                     <div css={{flexGrow: 1}}>
                         <PlayerList />
                     </div>
+                    <Github />
                 </Panel>
             </DefaultLoaderSwitch>
         );
 
     return (
         <DefaultLoaderSwitch {...c}>
+            <EnterWordScreen />
+            <RoundWinScreen />
+            <MatchWinScreen />
             <div
                 css={{
                     display: "flex",
@@ -132,19 +124,13 @@ export const App: FC = () => {
                         overflow: "auto",
                         minWidth: 0,
                         display: "flex",
-                        flexDirection: "column",
                         flexGrow: 1,
-                        justifyContent: "space-between",
+                        "> *": {
+                            flex: 1,
+                        },
                     }}>
-                    <div css={{height: 300}}>
-                        <Judging />
-                    </div>
-                    <div css={{height: 300}}>
-                        <PlayedCards />
-                    </div>
-                    <div>
-                        <Hand />
-                    </div>
+                    <OwnView />
+                    <PlayerViews />
                 </div>
                 <Surface
                     css={{
@@ -164,8 +150,8 @@ export const App: FC = () => {
                     <div css={{flexGrow: 1}}>
                         <PlayerList />
                     </div>
+                    <Github />
                 </Surface>
-                {/* <PackSelection /> */}
             </div>
         </DefaultLoaderSwitch>
     );

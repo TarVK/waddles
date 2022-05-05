@@ -13,8 +13,8 @@ export const PlayerComp: FC<{player: Player; plain?: boolean}> = ({player, plain
     const [showContext, setShowContext] = useState(false);
     const isAdmin = Application.isAdmin(h);
     const me = Application.getPlayer(h);
-    const room = Application.getRoom(h);
-    const won = player.hasSelection(room?.getAnswer(h) || [], h);
+    const room = Application.getRoom(h)!;
+    const won = room.getWinner(h)?.getID() == player.getID();
     const elRef = useRef(null);
 
     const isMe = player.is(me);
@@ -28,10 +28,12 @@ export const PlayerComp: FC<{player: Player; plain?: boolean}> = ({player, plain
                             onClick={() => !isMe && !plain && setShowContext(true)}
                             css={{height: "auto"}}
                             text={player.getName(h)}
-                            secondaryText={`Points: ${player.getScore(h)}`}
+                            secondaryText={`Round: ${player.getScore(
+                                h
+                            )} - Total: ${player.getTotalScore(h)}`}
                             size={PersonaSize.size48}
                             initialsColor={
-                                won ? theme.palette.greenLight : theme.palette.accent
+                                won ? theme.palette.themeSecondary : theme.palette.accent
                             }
                             onRenderPrimaryText={
                                 isMe && !plain

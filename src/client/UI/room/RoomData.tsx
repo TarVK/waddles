@@ -9,11 +9,12 @@ import {SettingsModal} from "./settingsModal/SettingsModal";
 
 export const RoomData: FC = () => {
     const [h, c] = useDataHook();
-    const room = Application.getRoom(h);
+    const room = Application.getRoom(h)!;
     const isAdmin = Application.isAdmin(h);
-    const isGameGoing = room?.getJudge(h) != null;
+    const isGameGoing = room && room.getStatus(h) != "waiting";
+    const round = room.getRound(h);
     const startGame = () => {
-        if (room) room.resetDeck();
+        room?.start();
     };
 
     const theme = useTheme();
@@ -21,12 +22,20 @@ export const RoomData: FC = () => {
         <div>
             <RoomName /> <SettingsModal />
             <div css={{marginTop: theme.spacing.s1}} />
-            {isAdmin &&
-                (isGameGoing ? (
-                    <DefaultButton onClick={startGame}>Restart</DefaultButton>
-                ) : (
-                    <PrimaryButton onClick={startGame}>Start game!</PrimaryButton>
-                ))}
+            <div
+                css={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                }}>
+                <div>Round: {round}</div>
+                {isAdmin &&
+                    (isGameGoing ? (
+                        <DefaultButton onClick={startGame}>Restart</DefaultButton>
+                    ) : (
+                        <PrimaryButton onClick={startGame}>Start game!</PrimaryButton>
+                    ))}
+            </div>
         </div>
     );
 };

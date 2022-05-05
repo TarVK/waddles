@@ -2,7 +2,6 @@ import {Server as HTTPServer} from "http";
 import {AsyncSocketConnection} from "./AsyncSocketConnection";
 import {Room} from "./game/Room";
 import {Player} from "./game/Player";
-import {CardPack} from "./game/cards/CardPack";
 
 // All the rooms currently being used
 const rooms: {
@@ -59,9 +58,6 @@ function updateRoomState(room: Room): void {
  * @param server The http server to use, or undefined to let the socket create its own server
  */
 export async function startApplication(server?: HTTPServer): Promise<void> {
-    // Initialize the cards
-    await CardPack.load();
-
     // Start the socket server
     AsyncSocketConnection.startServer((con: AsyncSocketConnection) => {
         // Create a player using this connection

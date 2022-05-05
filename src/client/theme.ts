@@ -1,19 +1,20 @@
 import {loadTheme} from "office-ui-fabric-react";
+import {ICharStatus} from "../_types/game/ICharStatus";
 
 loadTheme({
     palette: {
-        themePrimary: "#fe9c00",
-        themeLighterAlt: "#eff6fc",
-        themeLighter: "#deecf9",
-        themeLight: "#c7e0f4",
+        themePrimary: "#c9b458",
+        themeSecondary: "#6aaa64",
+        themeLighterAlt: "#f5f5f5",
+        themeLighter: "#ededed",
+        themeLight: "#e7e7e7",
         themeTertiary: "#e5b2a1",
-        themeSecondary: "#29b2d4",
-        themeDarkAlt: "#106ebe",
-        themeDark: "#303030",
-        themeDarker: "#004578",
+        themeDarkAlt: "#bfa843",
+        themeDark: "#bda84b",
+        themeDarker: "#a69138",
         neutralLighterAlt: "#f8f8f8",
         neutralLighter: "#f4f4f4",
-        neutralLight: "#eaeaea",
+        neutralLight: "#d3d6da",
         neutralQuaternaryAlt: "#dadada",
         neutralQuaternary: "#d0d0d0",
         neutralTertiaryAlt: "#c8c8c8",
@@ -26,3 +27,10 @@ loadTheme({
         white: "#ffffff",
     },
 });
+
+export const gameColors: Record<ICharStatus, string | null> = {
+    absent: "#787c7e",
+    contains: "#c9b458",
+    matches: "#6aaa64",
+    unknown: null,
+};

@@ -1,7 +1,9 @@
+import {IAttempt} from "./IAttempt";
+
 export type IPlayerData = {
     ID: string;
     name: string;
     score: number;
-    selection: string[];
-    hand?: string[];
+    totalScore: number;
+    attempts: IAttempt[];
 };

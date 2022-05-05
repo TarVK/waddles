@@ -1,5 +1,5 @@
 import {jsx} from "@emotion/core";
-import {IconButton, Modal, SearchBox, Toggle, Button} from "@fluentui/react";
+import {IconButton, Modal, SearchBox, Toggle, Button, Dropdown} from "@fluentui/react";
 import {useDataHook} from "model-react";
 import {FC, Fragment, useEffect, useState} from "react";
 import {TextField} from "../../../components/TextField";
@@ -7,35 +7,32 @@ import {Title} from "../../../components/Title";
 import {Application} from "../../../model/Application";
 import {useSyncState} from "../../../services/useSyncState";
 import {useTheme} from "../../../services/useTheme";
-import {PackSelection} from "./PackSelection";
 import {useIsMobileView} from "../../../services/useIsMobileView";
 import {FakeFocus} from "../../../components/FakeFocus";
+import {WordListSelection} from "./wordList/WordListSelection";
+import {IScoreMode} from "../../../../_types/game/IScoreMode";
+import {IWordMode} from "../../../../_types/game/IWordMode";
+import {
+    keyboardLayout,
+    keyboardLayouts,
+    setKeyboardLayout,
+} from "../../../services/keyboardLayout";
 
 export const SettingsModal: FC = () => {
     const [h, c] = useDataHook();
 
     // Retrieve all relevant data
-    const room = Application.getRoom(h);
+    const room = Application.getRoom(h)!;
     const isAdmin = Application.isAdmin(h);
-    const cardsSelection = room?.getCardSelection();
 
-    // Retrieve the packs
-    const selectedPacks = cardsSelection?.getSelection(h) || [];
-
-    // Open the packs if no selection was made yet
     const [isOpen, setOpen] = useState(false);
-    useEffect(() => {
-        if (room && selectedPacks.length == 0) setOpen(true);
-    }, [room, selectedPacks.length == 0]);
 
     // Keep track of some local data
-    const [search, setSearch] = useState("");
-    const [handSize, setHandSize] = useSyncState(room?.getHandSize(h) || 0);
     const [maxPlayerCount, setMaxPlayerCount] = useSyncState(
         room?.getMaxPlayerCount(h) || 2
     );
+    const settings = room.getSettings(h);
 
-    const isMobile = useIsMobileView();
     const theme = useTheme();
     return (
         <Fragment>
@@ -56,29 +53,14 @@ export const SettingsModal: FC = () => {
                 onDismiss={() => setOpen(false)}
                 styles={{main: {padding: theme.spacing.s1, width: 800}}}>
                 <div css={{display: "flex", maxHeight: "90vh", flexDirection: "column"}}>
-                    {isMobile && (
-                        <div css={{display: "flex", alignItems: "flex-end"}}>
-                            <Title css={{flexGrow: 1}}>Room settings</Title>
-                            <IconButton
-                                iconProps={{iconName: "remove"}}
-                                onClick={() => setOpen(false)}
-                            />
-                        </div>
-                    )}
                     <div css={{display: "flex", alignItems: "flex-end"}}>
-                        <TextField
-                            label={"Hand size"}
-                            css={{flexGrow: 1}}
-                            value={handSize + ""}
-                            type="number"
-                            disabled={!isAdmin}
-                            onChange={(e, v) => v !== undefined && setHandSize(Number(v))}
-                            onBlur={() => {
-                                if (room && room.getHandSize(null) != handSize)
-                                    room.setHandSize(handSize);
-                            }}
+                        <Title css={{flexGrow: 1}}>Room settings</Title>
+                        <IconButton
+                            iconProps={{iconName: "remove"}}
+                            onClick={() => setOpen(false)}
                         />
-
+                    </div>
+                    <div css={{display: "flex", alignItems: "flex-end"}}>
                         <TextField
                             label={"Max player count"}
                             css={{
@@ -109,29 +91,147 @@ export const SettingsModal: FC = () => {
                     {/* We don't want an actual field to auto focus, so this is a dirty fix */}
                     <FakeFocus />
 
-                    <Title
-                        css={{
-                            marginTop: theme.spacing.m,
-                            marginBottom: theme.spacing.s1,
-                        }}>
-                        Card packs selection
-                    </Title>
-                    <SearchBox
-                        placeholder="Search"
-                        underlined
-                        value={search}
-                        onChange={(e, v) => v !== undefined && setSearch(v)}
-                    />
+                    <WordListSelection />
+
+                    <Title css={{marginTop: theme.spacing.m}}>Modes</Title>
                     <div
                         css={{
-                            flex: 1,
-                            flexShrink: 1,
-                            minHeight: 0,
-                            overflow: "auto",
-                        }}
-                        data-is-scrollable={true}>
-                        <PackSelection filter={search.toLowerCase()} />
+                            display: "flex",
+                            padding: theme.spacing.s1,
+                            gap: theme.spacing.s1,
+                            flexWrap: "wrap",
+                        }}>
+                        <Dropdown
+                            css={{flex: 1}}
+                            placeholder="Select a scoring mode"
+                            label="Scoring mode"
+                            selectedKey={settings.scoring}
+                            disabled={!isAdmin}
+                            options={[
+                                {
+                                    key: "speed",
+                                    text: "Fastest guess",
+                                },
+                                {
+                                    key: "attempts",
+                                    text: "Fewest attempts",
+                                },
+                            ]}
+                            onChange={(p, i) =>
+                                room.setSettings({
+                                    ...settings,
+                                    scoring: i!.key as IScoreMode,
+                                })
+                            }
+                        />
+                        <Dropdown
+                            css={{flex: 1}}
+                            placeholder="Select a word mode"
+                            label="Word mode"
+                            selectedKey={settings.wordMode}
+                            disabled={!isAdmin}
+                            options={[
+                                {
+                                    key: "randomized",
+                                    text: "Randomly chosen",
+                                },
+                                {
+                                    key: "entered",
+                                    text: "Entered by a player",
+                                },
+                            ]}
+                            onChange={(p, i) =>
+                                room.setSettings({
+                                    ...settings,
+                                    wordMode: i!.key as IWordMode,
+                                })
+                            }
+                        />
+                        <Dropdown
+                            css={{flex: 1}}
+                            placeholder="Select a visibility mode"
+                            label="Visibility mode"
+                            selectedKey={settings.seeOpponents ? "shown" : "hidden"}
+                            disabled={!isAdmin}
+                            options={[
+                                {
+                                    key: "hidden",
+                                    text: "Hide opponent's answers",
+                                },
+                                {
+                                    key: "shown",
+                                    text: "Show opponent's answers",
+                                },
+                            ]}
+                            onChange={(p, i) =>
+                                room.setSettings({
+                                    ...settings,
+                                    seeOpponents: i!.key == "shown",
+                                })
+                            }
+                        />
                     </div>
+
+                    <Title css={{marginTop: theme.spacing.m}}>Time management</Title>
+                    <div
+                        css={{
+                            display: "flex",
+                            padding: theme.spacing.s1,
+                            gap: theme.spacing.s1,
+                        }}>
+                        <TextField
+                            label={"Number of rounds"}
+                            css={{
+                                flexGrow: 1,
+                            }}
+                            value={settings.rounds + ""}
+                            type="number"
+                            disabled={!isAdmin}
+                            onChange={(e, v) => {
+                                if (v !== undefined) {
+                                    const val = Number(v);
+                                    if (isNaN(val)) return;
+                                    room.setSettings({
+                                        ...settings,
+                                        rounds: Math.max(1, val),
+                                    });
+                                }
+                            }}
+                        />
+                        <TextField
+                            label={"Allowed attempts"}
+                            css={{
+                                flexGrow: 1,
+                            }}
+                            value={settings.attempts + ""}
+                            type="number"
+                            disabled={!isAdmin}
+                            onChange={(e, v) => {
+                                if (v !== undefined) {
+                                    const val = Number(v);
+                                    if (isNaN(val)) return;
+                                    room.setSettings({
+                                        ...settings,
+                                        attempts: Math.max(1, val),
+                                    });
+                                }
+                            }}
+                        />
+                    </div>
+
+                    <Title css={{marginTop: theme.spacing.m}}>Keyboard layout</Title>
+
+                    <Dropdown
+                        css={{flex: 1}}
+                        placeholder="Select a keyboard layout"
+                        label="Keyboard layout"
+                        selectedKey={keyboardLayout.get(h).name}
+                        options={Object.keys(keyboardLayouts).map(name => ({
+                            key: name,
+                            text: name,
+                        }))}
+                        onChange={(p, i) => setKeyboardLayout(i!.key + "")}
+                    />
                 </div>
             </Modal>
         </Fragment>

@@ -19,11 +19,11 @@ if (process.env.NODE_ENV === "production") {
         // TODO: read url from environment variables, put port in webpack build
         domain: {
             socket: {
-                address: "https://themCards.herokuapp.com",
+                address: "https://waddles.herokuapp.com",
                 port: process.env.PORT || "",
             },
             resources: {
-                address: "https://themCards.herokuapp.com",
+                address: "https://waddles.herokuapp.com",
                 port: process.env.PORT || "",
             },
         },

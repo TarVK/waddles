@@ -1,31 +1,42 @@
 import {Player} from "./Player";
 import {uuid} from "uuidv4";
 import {IRoomData} from "../../_types/game/IRoomData";
-import {CardsSelection} from "./cards/CardsSelection";
-import {QuestionCard} from "./cards/QuestionCard";
-import {AnswerCard} from "./cards/AnswerCard";
-import {shuffleArray} from "../services/shuffleArray";
 import {EventManager} from "../../services/EventManager";
 import {withErrorHandling} from "../services/withErrorHandling";
+import {IGameSettings} from "../../_types/game/IGameSettings";
+import {IAttempt} from "../../_types/game/IAttempt";
+import {ILetterStatus} from "../../_types/game/ILetterStatus";
+import {IError} from "../../_types/game/IError";
+import {IGameState} from "../../_types/game/IGameState";
+import {TOptional} from "../../_types/TOptional";
 
 export class Room {
     protected eventManager: EventManager = new EventManager();
 
     protected ID: string;
-    protected maxPlayerCount: number = 8;
-    protected handSize: number = 12;
+    protected maxPlayerCount: number = 2;
     protected isPrivat: boolean;
 
+    protected settings: IGameSettings = {
+        attempts: 6,
+        rounds: 3,
+        scoring: "speed",
+        wordMode: "randomized",
+        wordList: ["doggo"],
+        wordListName: "fake",
+        seeOpponents: false,
+    };
+
     protected players: Player[] = [];
-    protected cardsSelection: CardsSelection;
 
-    // The roles players currently have
-    protected answeringPlayers: {player: Player; revealed: boolean}[] = [];
-    protected judge: Player;
+    protected previousChooser: Player | undefined;
+    protected previousGuesser: Player | undefined;
 
-    // The drawn question, and answer picked by the judge
-    protected selectedQuestion: QuestionCard | null;
-    protected selectedAnswer: AnswerCard[] | null;
+    protected state: IGameState = {
+        status: "waiting",
+        round: 0,
+    };
+    protected word: string;
 
     /**
      * Creates a new room for players
@@ -35,7 +46,6 @@ export class Room {
     public constructor(ID: string = uuid(), isPrivat: boolean = false) {
         this.ID = ID;
         this.isPrivat = isPrivat;
-        this.cardsSelection = new CardsSelection(this);
     }
 
     // Getters
@@ -61,14 +71,6 @@ export class Room {
      */
     public getPlayers(): Player[] {
         return this.players;
-    }
-
-    /**
-     * Retrieves the current judge
-     * @returns The judge
-     */
-    public getJudge(): Player {
-        return this.judge;
     }
 
     /**
@@ -109,26 +111,22 @@ export class Room {
         const socket = player.getSocket();
         socket.on(
             `rooms/${this.ID}/retrieve`,
-            (): IRoomData =>
+            (): IRoomData | IError =>
                 withErrorHandling(() => ({
                     accessibility: {
                         privat: this.isPrivat,
                         maxPlayerCount: this.maxPlayerCount,
                     },
-                    handSize: this.handSize,
                     ID: this.ID,
                     playerIDs: this.players.map(p => p.getID()),
-                    maxPlayerCount: this.maxPlayerCount,
-                    judgeID: this.judge?.getID() || null,
-                    answeringPlayers: serializeAnsweringPlayers(this.answeringPlayers),
-                    question: this.selectedQuestion?.getText() ?? "",
-                    answer: this.selectedAnswer?.map(card => card.getText()) || null,
+                    settings: this.settings,
+                    state: this.state,
                 })),
             this.ID
         );
 
-        const onlyIfJudge = (func: () => any) => {
-            if (this.getJudge() != player)
+        const onlyIfChooser = (func: () => any) => {
+            if (!this.isPlayerChooser(player))
                 return {errorMessage: "not permitted", errorCode: -2};
 
             const res = withErrorHandling(func);
@@ -136,34 +134,10 @@ export class Room {
             return {success: true};
         };
         socket.on(
-            `rooms/${this.ID}/pickAnswer`,
-            (playerID: string) =>
-                onlyIfJudge(() => {
-                    if (this.selectedAnswer != null)
-                        return {
-                            errorMessage: "answer was already selected",
-                            errorCode: 1,
-                        };
-
-                    const p = this.players.find(player => player.getID() == playerID);
-                    if (p) this.pickAnswer(p);
-                }),
-            this.ID
-        );
-        socket.on(
-            `rooms/${this.ID}/nextRound`,
-            () =>
-                onlyIfJudge(() => {
-                    this.nextRound();
-                }),
-            this.ID
-        );
-        socket.on(
-            `rooms/${this.ID}/reveal`,
-            (playerID: string) =>
-                onlyIfJudge(() => {
-                    const p = this.players.find(player => player.getID() == playerID);
-                    if (p) this.revealAnswer(p);
+            `rooms/${this.ID}/enterWord`,
+            (word: string) =>
+                onlyIfChooser(() => {
+                    this.setWord(word);
                 }),
             this.ID
         );
@@ -177,19 +151,27 @@ export class Room {
             return {success: true};
         };
         socket.on(
+            `rooms/${this.ID}/start`,
+            () =>
+                onlyIfAdmin(() => {
+                    this.startGame();
+                }),
+            this.ID
+        );
+        socket.on(
+            `rooms/${this.ID}/nextRound`,
+            () =>
+                onlyIfAdmin(() => {
+                    this.nextRound();
+                }),
+            this.ID
+        );
+        socket.on(
             `rooms/${this.ID}/kickPlayer`,
             (playerID: string) =>
                 onlyIfAdmin(() => {
                     const p = this.players.find(player => player.getID() == playerID);
                     if (p) this.kickPlayer(p);
-                }),
-            this.ID
-        );
-        socket.on(
-            `rooms/${this.ID}/resetDeck`,
-            () =>
-                onlyIfAdmin(() => {
-                    this.resetDeck();
                 }),
             this.ID
         );
@@ -201,17 +183,15 @@ export class Room {
                 }),
             this.ID
         );
+
         socket.on(
-            `rooms/${this.ID}/setHandSize`,
-            handSize =>
+            `rooms/${this.ID}/setSettings`,
+            settings =>
                 onlyIfAdmin(() => {
-                    this.setHandSize(Math.min(Math.max(2, handSize), 50));
+                    this.setSettings(settings);
                 }),
             this.ID
         );
-
-        // Share components of this room
-        this.cardsSelection.share(player);
 
         this.emitAccesibilityChange();
     }
@@ -236,27 +216,23 @@ export class Room {
         // Remove all socket listeners of this room
         const socket = player.getSocket();
         socket.off(`rooms/${this.ID}/retrieve`, this.ID);
-        socket.off(`rooms/${this.ID}/pickAnswer`, this.ID);
-        socket.off(`rooms/${this.ID}/nextRound`, this.ID);
-        socket.off(`rooms/${this.ID}/reveal`, this.ID);
+        socket.off(`rooms/${this.ID}/enterWord`, this.ID);
         socket.off(`rooms/${this.ID}/kickPlayer`, this.ID);
-        socket.off(`rooms/${this.ID}/resetDeck`, this.ID);
         socket.off(`rooms/${this.ID}/setAccessibility`, this.ID);
-        socket.off(`rooms/${this.ID}/setHandSize`, this.ID);
 
-        // unshare components of this room
-        this.cardsSelection.unshare(player);
-
-        // Remove the player's cards
-        this.clearHand(player);
-
-        // Remove the player from answering players, and potentially move to the next round
-        this.setAnsweringPlayers(
-            this.answeringPlayers.filter(({player}) => this.players.includes(player))
-        );
-        if (player == this.getJudge()) this.nextRound();
+        // Move to the next round
+        if (this.isPlayerChooser(player)) this.nextRound();
 
         this.emitAccesibilityChange();
+    }
+
+    /**
+     * Whether the player is currently choosing the word
+     * @param player The player to be checked
+     * @returns Whether the player is choosing
+     */
+    public isPlayerChooser(player: Player): boolean {
+        return this.state.chooserID == player.getID();
     }
 
     /**
@@ -267,181 +243,156 @@ export class Room {
     public kickPlayer(player: Player, message: string = ""): void {
         this.broadcast(`rooms/${this.ID}/kickPlayer`, player.getID(), message);
         player.setRoom(null);
-        if (player == this.getJudge()) this.nextRound();
     }
 
     // Game
     /**
-     * Updates the judge, automatically goes to the next in line if no judge is specified
-     * @param judge The new judge
+     * Sets the game state
+     * @param state The new state of the game
      */
-    public selectJudge(judge?: Player): void {
-        if (!judge) {
-            const currentIndex = this.players.indexOf(this.judge);
-            judge = this.players[(currentIndex + 1) % this.players.length];
-        }
-
-        this.judge = judge;
-        this.broadcast(`rooms/${this.ID}/setJudge`, judge?.getID());
+    protected setState(state: TOptional<IGameState, "round">): void {
+        this.state = {round: this.state.round, ...state};
+        this.broadcast(`rooms/${this.ID}/setState`, this.state);
     }
 
     /**
-     * Updates the question, automatically draws a question if none is specified
-     * @param question The question to select
+     * Starts the game
      */
-    public selectQuestion(question?: QuestionCard): void {
-        if (!question) question = this.cardsSelection.drawQuestion();
-        if (this.selectedQuestion)
-            this.cardsSelection.returnQuestion(this.selectedQuestion);
-
-        this.selectedQuestion = question;
-        this.broadcast(`rooms/${this.ID}/setQuestion`, question.getText());
-    }
-
-    /**
-     * Selects the specified answers
-     * @param answer The answer cards
-     */
-    public selectAnswer(answer: AnswerCard[] | null): void {
-        this.selectedAnswer = answer;
-        this.broadcast(
-            `rooms/${this.ID}/setAnswer`,
-            answer ? answer.map(card => card.getText()) : null
-        );
-    }
-
-    /**
-     * Sets the players that are currently answering, and whether their answer is revealed
-     * @param players The answering players
-     */
-    public setAnsweringPlayers(players?: {player: Player; revealed: boolean}[]): void {
-        if (!players) {
-            players = this.players
-                .filter(p => p != this.judge)
-                .map(p => ({player: p, revealed: false}));
-            shuffleArray(players);
-        }
-
-        this.answeringPlayers = players;
-        this.broadcast(
-            `rooms/${this.ID}/setAnsweringPlayers`,
-            serializeAnsweringPlayers(players)
-        );
-    }
-
-    /**
-     * Reveals the answer of a given player
-     * @param player The player whose answer to reveal
-     */
-    public revealAnswer(player: Player): void {
-        this.setAnsweringPlayers(
-            this.answeringPlayers.map(({player: p, revealed}) => ({
-                player: p,
-                revealed: p == player ? true : revealed,
-            }))
-        );
-    }
-
-    /**
-     * Selects the specified player to have given the best answer
-     * @param player The player whose answer was chosen
-     */
-    public pickAnswer(player: Player): void {
-        player.setScore(player.getScore() + 1);
-        this.selectAnswer(player.getSelection());
-    }
-
-    /**
-     * Goes to the next round, taking care of resetting cards etc
-     */
-    public nextRound(): void {
-        // Return the played cards
-        this.players.forEach(player => {
-            // Return used cards
-            player
-                .getSelection()
-                .forEach(answer => this.cardsSelection.returnAnswer(answer));
-            player.clearSelection();
-
-            // Draw new cards
-            this.updateHand(player);
-        });
-
-        // Clear the answer
-        this.selectAnswer(null);
-
-        // Return the question card, and choose a new question
-        if (this.selectedQuestion)
-            this.cardsSelection.returnQuestion(this.selectedQuestion);
-        this.selectQuestion();
-
-        // Choose a new judge and answering players
-        this.selectJudge();
-        this.setAnsweringPlayers();
-    }
-
-    /**
-     * Updates the hand of a given player to have the correct number of cards
-     * @param player The player whose hand to fill
-     */
-    protected updateHand(player: Player): void {
-        const drawn = [] as AnswerCard[];
-        for (var i = this.handSize - player.getHand().length; i > 0; i--) {
-            const card = this.cardsSelection.drawAnswer();
-            if (card) drawn.push(card);
-            else {
-                // No pack was selected yet, or all cards are in hands
-            }
-        }
-        player.setHand([...player.getHand(), ...drawn]);
-    }
-
-    /**
-     * Removes all the cards a player posses
-     * @param player The player whose hand to clear
-     */
-    protected clearHand(player: Player): void {
-        player.getHand().forEach(card => this.cardsSelection.returnAnswer(card));
-        player.getSelection().forEach(card => this.cardsSelection.returnAnswer(card));
-        player.clearSelection();
-        player.setHand([]);
-    }
-
-    /**
-     * Resets the deck, together with all scores
-     */
-    public resetDeck(): void {
-        // Return the question card
-        if (this.selectedQuestion)
-            this.cardsSelection.returnQuestion(this.selectedQuestion);
-        this.selectedQuestion = null;
-
-        // Reset all players data
+    public startGame(): void {
         this.players.forEach(player => {
             player.setScore(0);
-            this.clearHand(player);
         });
-
-        // Reset the deck
-        this.cardsSelection.resetDeck();
-
-        // Start the first round
-        this.nextRound();
+        this.startRound(1);
     }
 
     /**
-     * Sets the number of cards each player has in their hand
-     * @param handSize The number of cards
+     * Starts the next round
      */
-    public setHandSize(handSize: number): void {
-        this.handSize = handSize;
-        this.broadcast(`rooms/${this.ID}/setHandSize`, handSize);
+    public nextRound(): void {
+        const nextRound = this.state.round + 1;
+        if (nextRound <= this.settings.rounds) {
+            this.startRound(nextRound);
+        } else {
+            this.setState({
+                ...this.state,
+                status: "waiting",
+            });
+        }
+    }
+
+    /**
+     * Starts the process of choosing a word
+     * @param round The round that's being started
+     */
+    protected startRound(round: number): void {
+        // Return the played cards
         this.players.forEach(player => {
-            if (player.getHand().length > 0) {
-                this.clearHand(player);
-                this.updateHand(player);
-            }
+            player.setAttempts([]);
         });
+
+        // Choose the new word
+        if (this.settings.wordMode == "entered") {
+            const ID = this.previousChooser?.getID();
+            const currentIndex = ID
+                ? this.players.findIndex(player => player.getID() == ID)
+                : -1;
+            const chooser = this.players[(currentIndex + 1) % this.players.length];
+
+            this.previousChooser = chooser;
+            this.setState({
+                round,
+                status: "choosingWord",
+                chooserID: chooser?.getID(),
+            });
+        } else {
+            const words = this.settings.wordList;
+            const index = Math.floor(Math.random() * words.length);
+            this.setWord(words[index], round);
+        }
+    }
+
+    /**
+     * Sets the word that is being guessed
+     * @param word The word to be guessed
+     * @param round The new round value
+     */
+    protected setWord(word: string, round: number = this.state.round) {
+        this.word = word;
+        this.setState({
+            round,
+            chooserID: this.state.chooserID,
+            status: "playing",
+        });
+    }
+
+    /**
+     * Checks the player's attempts, and updates the game state accordingly
+     * @param player The player whose guess to be checked
+     */
+    public checkPlayerAttempts(player: Player) {
+        if (this.state.status == "playing") {
+            const allowedAttempts = this.settings.attempts;
+
+            // Determine if there's a new winner of this round according to the scoring mode
+            const mode = this.settings.scoring;
+            let winner: Player | undefined;
+            let draw: boolean = false;
+
+            const playersAttempts = player.getAttempts();
+            const guessedWord = player.guessedWord();
+            const isLastAttempt = playersAttempts.length == allowedAttempts;
+            if (mode == "speed") {
+                if (guessedWord) winner = player;
+                else if (isLastAttempt) {
+                    const allPlayersFinished = this.players.every(
+                        player => player.getAttempts().length == allowedAttempts
+                    );
+                    if (allPlayersFinished) draw = true;
+                }
+            } else if (mode == "attempts") {
+                if (guessedWord || isLastAttempt) {
+                    const allPlayersFinished = this.players.every(
+                        player =>
+                            player.getAttempts().length == allowedAttempts ||
+                            player.guessedWord()
+                    );
+                    if (allPlayersFinished) {
+                        const minGuesses = this.players.reduce(
+                            (min, player) => Math.min(player.getAttempts().length, min),
+                            Infinity
+                        );
+                        const playersWithMinGuesses = this.players.filter(
+                            player => player.getAttempts().length == minGuesses
+                        );
+                        if (playersWithMinGuesses.length == 1)
+                            winner = playersWithMinGuesses[0];
+                        else draw = true;
+                    }
+                }
+            }
+
+            // Update the state according to the derived data
+            if (winner || draw) {
+                this.setState({
+                    status: "showingWinner",
+                    winnerID: winner?.getID(),
+                });
+                if (winner) {
+                    winner.setScore(winner.getScore() + 1);
+                    winner.setTotalScore(winner.getTotalScore() + 1);
+                }
+                return;
+            }
+        }
+    }
+
+    /**
+     * Updates the settings data
+     * @param settings The new settings to be used
+     */
+    public setSettings(settings: IGameSettings): void {
+        this.settings = settings;
+        this.broadcast(`rooms/${this.ID}/setSettings`, settings);
     }
 
     /**
@@ -466,6 +417,45 @@ export class Room {
             this.maxPlayerCount,
             this.players.length
         );
+    }
+
+    /**
+     * Rates the given attempt and determines the correctness of the letters.
+     * It also either includes or excludes the characters in the attempt, depending on the room settings (so they either are or are not visible to other players)
+     * @param attempt The attempt to be scored
+     * @returns The scoring
+     */
+    public rate(attempt: string): IAttempt {
+        const chars = attempt.split("");
+        const wordChars = (this.word ?? "").split("");
+
+        // Map the characters to those tha match, or aren't known yet, while removing all matched chars from the word chars
+        const matchesReversed: ILetterStatus[] = [];
+        for (let i = wordChars.length - 1; i >= 0; i--) {
+            const char = chars[i];
+            const matches = char == wordChars[i];
+            if (matches) wordChars.splice(i, 1);
+            matchesReversed.push({
+                type: matches ? ("matches" as const) : ("unknown" as const),
+                letter: char,
+            });
+        }
+        const matched = matchesReversed.reverse();
+
+        // Divide the remaining chars
+        const mapped = matched.map<ILetterStatus>(data => {
+            if (data.type == "matches") return data;
+
+            const index = wordChars.indexOf(data.letter!);
+            if (index == -1) return {...data, type: "absent"};
+
+            wordChars.splice(index, 1);
+            return {...data, type: "contains"};
+        });
+
+        // Remover the characters if needed
+        if (this.settings.seeOpponents) return mapped;
+        else return mapped.map(({type}) => ({type}));
     }
 
     // Utility

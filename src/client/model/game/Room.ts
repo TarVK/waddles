@@ -1,27 +1,23 @@
 import {Field, IDataHook} from "model-react";
 import {Player} from "./Player";
 import {IRoomData} from "../../../_types/game/IRoomData";
+import {IError} from "../../../_types/game/IError";
 import {SocketModel} from "../socketUtils/SocketModel";
 import {ISocketResponse} from "../_types/ISocketResponse";
-import {CardsSelection} from "./CardsSelection";
 import {SocketField} from "../socketUtils/SocketField";
-import {IAnsweringPlayersData} from "../_types/IAnswerPlayersData";
-import {IAnsweringPlayers} from "../_types/IAnswerPlayers";
+import {IGameSettings} from "../../../_types/game/IGameSettings";
+import {IGameState} from "../../../_types/game/IGameState";
+import {IGameStatus} from "../../../_types/game/IGameStatus";
 
 export class Room extends SocketModel {
     protected ID: string;
 
     protected accessibility: SocketField<{privat: boolean; maxPlayerCount: number}>;
-    protected handSize: SocketField<number>;
+    protected settings: SocketField<IGameSettings>;
 
     protected players = new Field([] as Player[]);
-    protected cardsSelection: CardsSelection;
 
-    protected judge: SocketField<null | Player, any>;
-    protected answeringPlayers: SocketField<{player: Player; revealed: boolean}[], any>;
-
-    protected selectedQuestion: SocketField<string>;
-    protected selectedAnswer: SocketField<null | string[]>;
+    protected state: SocketField<IGameState>;
 
     /**
      * Creates a new room with the given ID
@@ -36,61 +32,28 @@ export class Room extends SocketModel {
      * Initializes this room
      */
     protected async initialize(): Promise<void> {
-        const roomData = (await this.socket.emitAsync(
-            `rooms/${this.ID}/retrieve`
-        )) as IRoomData;
+        const roomData = (await this.socket.emitAsync(`rooms/${this.ID}/retrieve`)) as
+            | IRoomData
+            | IError;
+        if ("errorMessage" in roomData) {
+            console.error(roomData);
+            throw roomData.errorMessage;
+        }
 
         const players = await Promise.all(
             roomData.playerIDs.map(ID => Player.create(ID))
         );
         this.players.set([...players, ...this.players.get(null)]);
-        this.cardsSelection = await CardsSelection.create(this);
-        this.selectedQuestion = new SocketField(
-            `rooms/${this.ID}/setQuestion`,
-            roomData.question
-        );
-        this.selectedAnswer = new SocketField(
-            `rooms/${this.ID}/setAnswer`,
-            roomData.answer
-        );
-        this.handSize = new SocketField(
-            `rooms/${this.ID}/setHandSize`,
-            roomData.handSize
+        this.settings = new SocketField(
+            `rooms/${this.ID}/setSettings`,
+            roomData.settings
         );
         this.accessibility = new SocketField(
             `rooms/${this.ID}/setAccessibility`,
             roomData.accessibility
         );
 
-        const deserializeAnsweringPlayers = (players: IAnsweringPlayersData) =>
-            players
-                .map(({playerID, revealed}) => ({
-                    player: this.players.get(null).find(p => p.getID() == playerID),
-                    revealed,
-                }))
-                .filter(({player}) => player) as IAnsweringPlayers;
-        this.answeringPlayers = new SocketField(
-            `rooms/${this.ID}/setAnsweringPlayers`,
-            deserializeAnsweringPlayers(roomData.answeringPlayers),
-            {
-                serialize: (players: IAnsweringPlayers) =>
-                    players.map(({player, revealed}) => ({
-                        playerID: player.getID(),
-                        revealed,
-                    })),
-                deserialize: (players: IAnsweringPlayersData) =>
-                    deserializeAnsweringPlayers(players),
-            }
-        );
-        this.judge = new SocketField(
-            `rooms/${this.ID}/setJudge`,
-            this.players.get(null).find(p => p.getID() == roomData.judgeID) || null,
-            {
-                serialize: (player: Player) => player.getID(),
-                deserialize: (playerID: string) =>
-                    this.players.get(null).find(p => p.getID() == playerID) || null,
-            }
-        );
+        this.state = new SocketField(`rooms/${this.ID}/setState`, roomData.state);
     }
 
     /**
@@ -151,12 +114,33 @@ export class Room extends SocketModel {
     }
 
     /**
-     * Retrieves the player that is currently judging
+     * Retrieves the player that is currently choosing the word
      * @param hook The data hook to subscribe to changes
-     * @returns The judge
+     * @returns The chooser
      */
-    public getJudge(hook: IDataHook): Player | null {
-        return this.judge.get(hook);
+    public getChooser(hook: IDataHook): Player | null {
+        const chooserID = this.state.get(hook).chooserID;
+        return this.players.get(hook).find(player => player.getID() == chooserID) ?? null;
+    }
+
+    /**
+     * Retrieves the player that is currently performing a guess
+     * @param hook The data hook to subscribe to changes
+     * @returns The guesser
+     */
+    public getGuesser(hook: IDataHook): Player | null {
+        const guesserID = this.state.get(hook).guesserID;
+        return this.players.get(hook).find(player => player.getID() == guesserID) ?? null;
+    }
+
+    /**
+     * Retrieves the player that just won the round
+     * @param hook The data hook to subscribe to changes
+     * @returns The winner
+     */
+    public getWinner(hook: IDataHook): Player | null {
+        const winnerID = this.state.get(hook).winnerID;
+        return this.players.get(hook).find(player => player.getID() == winnerID) ?? null;
     }
 
     /**
@@ -169,108 +153,21 @@ export class Room extends SocketModel {
     }
 
     /**
-     * Retrieves the current question
+     * Retrieves the current game status
      * @param hook The data hook to subscribe to changes
-     * @returns The question
+     * @returns The status
      */
-    public getQuestion(hook: IDataHook): string {
-        return this.selectedQuestion.get(hook);
+    public getStatus(hook: IDataHook): IGameStatus {
+        return this.state.get(hook).status;
     }
 
     /**
-     * Retrieves the picked answer
+     * The round that we're currently in
      * @param hook The data hook to subscribe to changes
-     * @returns The answer cards
+     * @returns The current round
      */
-    public getAnswer(hook: IDataHook): string[] | null {
-        return this.selectedAnswer.get(hook);
-    }
-
-    /**
-     * Retrieves the picked answer filled into the question
-     * @param hook The data hook to subscribe to changes
-     * @returns The answer with questions
-     */
-    public getFilledInAnswer(hook: IDataHook): string | null {
-        const answer = this.selectedAnswer.get(hook);
-        if (answer == null) return null;
-        const parts = [...answer];
-        return this.selectedQuestion.get(hook).replace(/_/g, () => parts.shift() || "");
-    }
-
-    /**
-     * Retrieves the selection of playing cards
-     * @returns The cards selection
-     */
-    public getCardSelection(): CardsSelection {
-        return this.cardsSelection;
-    }
-
-    /**
-     * Retrieves whether any cards are revealed
-     * @param hook The hook to track changes
-     * @returns Whether cards are revealed
-     */
-    public isRevealed(hook: IDataHook): boolean {
-        return this.answeringPlayers
-            .get(hook)
-            .reduce((anyRevealed, {revealed}) => anyRevealed || revealed, false);
-    }
-
-    /**
-     * Retrieves whether all cards are revealed
-     * @param hook The hook to track changes
-     * @returns Whether cards are revealed
-     */
-    public areAllRevealed(hook: IDataHook): boolean {
-        return this.answeringPlayers
-            .get(hook)
-            .reduce(
-                (anyRevealed, {player, revealed}) =>
-                    anyRevealed && (player.getSelection(hook).length == 0 || revealed),
-                true
-            );
-    }
-
-    /**
-     * Retrieves the players that are currently answering, and whether their answer is revealed
-     * @param hook The hook to subscribe to changes
-     * @returns The answering players
-     */
-    public getAnsweringPlayers(hook: IDataHook): IAnsweringPlayers {
-        return this.answeringPlayers.get(hook);
-    }
-
-    /**
-     * Retrieves the number of answer cards that should be played
-     * @param hook The hook to track changes
-     * @returns The number of answer cards that should be played
-     */
-    public getRequiredAnswerCount(hook: IDataHook): number {
-        return this.selectedQuestion.get(hook)?.match(/_/g)?.length || 0;
-    }
-
-    /**
-     * Retrieves the number of players that played the correct number of cards
-     * @param hook The hook to track changes
-     * @returns The number of players that are ready
-     */
-    public getReadyCount(hook: IDataHook): number {
-        const requiredCount = this.getRequiredAnswerCount(hook);
-        return this.getPlayers(hook).reduce(
-            (count, player) =>
-                count + (player.getSelection(hook).length == requiredCount ? 1 : 0),
-            0
-        );
-    }
-
-    /**
-     * Retrieves the hand size of all players
-     * @param hook The hook to track changes
-     * @returns The hand size
-     */
-    public getHandSize(hook: IDataHook): number {
-        return this.handSize.get(hook);
+    public getRound(hook: IDataHook): number {
+        return this.state.get(hook).round;
     }
 
     /**
@@ -291,6 +188,15 @@ export class Room extends SocketModel {
         return this.accessibility.get(hook).maxPlayerCount;
     }
 
+    /**
+     * Retrieves the settings of the game
+     * @param hook The hook to track changes
+     * @returns The settings
+     */
+    public getSettings(hook: IDataHook): IGameSettings {
+        return this.settings.get(hook);
+    }
+
     // Actions
     /**
      * Kicks the specified player, only available if this client is admin
@@ -302,16 +208,15 @@ export class Room extends SocketModel {
     }
 
     /**
-     * Selects the answer of the specified player, only available if this client is judging
-     * @param player The player to select the answers of
+     * Starts the game
      * @returns The server's response
      */
-    public async pickAnswer(player: Player): Promise<ISocketResponse> {
-        return this.socket.emitAsync(`rooms/${this.ID}/pickAnswer`, player.getID());
+    public async start(): Promise<ISocketResponse> {
+        return this.socket.emitAsync(`rooms/${this.ID}/start`);
     }
 
     /**
-     * Continues to the next round, only available if this client is judging
+     * Starts the next round
      * @returns The server's response
      */
     public async nextRound(): Promise<ISocketResponse> {
@@ -319,20 +224,11 @@ export class Room extends SocketModel {
     }
 
     /**
-     * Reveals the selected cards of a player, only available if this client is judging
-     * @param player The player whose cards to reveal
-     * @returns The server's response
+     * Sets the word to be guessed by opponents
+     * @returns The words to be chosen
      */
-    public async revealAnswer(player: Player): Promise<ISocketResponse> {
-        return this.socket.emitAsync(`rooms/${this.ID}/reveal`, player.getID());
-    }
-
-    /**
-     * Continues to the next round,only available if this client is admin
-     * @returns The server's response
-     */
-    public async resetDeck(): Promise<ISocketResponse> {
-        return this.socket.emitAsync(`rooms/${this.ID}/resetDeck`);
+    public async setWord(word: string): Promise<ISocketResponse> {
+        return this.socket.emitAsync(`rooms/${this.ID}/enterWord`, word);
     }
 
     /**
@@ -352,11 +248,11 @@ export class Room extends SocketModel {
     }
 
     /**
-     * Sets the hand size of all players
-     * @param count The hand size
+     * Sets the game settings
+     * @param settings The settings to be used by the game
      */
-    public setHandSize(size: number): void {
-        this.handSize.set(size);
+    public setSettings(settings: IGameSettings): void {
+        this.settings.set(settings);
     }
 
     // Event handlers

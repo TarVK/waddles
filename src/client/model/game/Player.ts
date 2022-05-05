@@ -3,14 +3,18 @@ import {SocketModel} from "../socketUtils/SocketModel";
 import {IPlayerData} from "../../../_types/game/IPlayerData";
 import {IDataHook} from "model-react";
 import {ISocketResponse} from "../_types/ISocketResponse";
+import {IAttempt} from "../../../_types/game/IAttempt";
 
 export class Player extends SocketModel {
     protected ID: string;
     protected name: SocketField<string>;
 
     protected score: SocketField<number>;
-    protected hand: SocketField<string[]>;
-    protected selection: SocketField<string[]>;
+    protected totalScore: SocketField<number>;
+    protected attempts: SocketField<IAttempt[]>;
+
+    /** The words that were entered, if that data is known to the client */
+    protected attemptWords: string[];
 
     /**
      * Creates a new player
@@ -30,10 +34,13 @@ export class Player extends SocketModel {
         )) as IPlayerData;
         this.name = new SocketField(`players/${this.ID}/setName`, playerData.name);
         this.score = new SocketField(`players/${this.ID}/setScore`, playerData.score);
-        this.hand = new SocketField(`players/${this.ID}/setHand`, playerData.hand || []);
-        this.selection = new SocketField(
-            `players/${this.ID}/setSelection`,
-            playerData.selection
+        this.totalScore = new SocketField(
+            `players/${this.ID}/setTotalScore`,
+            playerData.totalScore
+        );
+        this.attempts = new SocketField(
+            `players/${this.ID}/setAttempts`,
+            playerData.attempts
         );
     }
 
@@ -76,21 +83,22 @@ export class Player extends SocketModel {
     }
 
     /**
-     * Retrieves the hand of the player
+     * Retrieves the total score of the player
      * @param hook The hook to subscribe to changes
-     * @returns The hand of the player
+     * @returns The score of the player
      */
-    public getHand(hook: IDataHook): string[] {
-        return this.hand.get(hook);
+    public getTotalScore(hook: IDataHook): number {
+        return this.totalScore.get(hook);
     }
 
     /**
-     * Retrieves the selection of the player
+     * Retrieves the attempts of the player
+     * @param length The length of an attempt
      * @param hook The hook to subscribe to changes
-     * @returns The selection of the player
+     * @returns The attempts of the player
      */
-    public getSelection(hook: IDataHook): string[] {
-        return this.selection.get(hook);
+    public getAttempts(length: number, hook: IDataHook): IAttempt[] {
+        return this.attempts.get(hook);
     }
 
     /**
@@ -102,21 +110,6 @@ export class Player extends SocketModel {
         return this.getID() == player?.getID();
     }
 
-    /**
-     * Retrieves whether the passed cards correspond to the user's selection
-     * @param cards The cards to check
-     * @param hook The hook to subscribe to changes
-     * @returns Whether they correspond
-     */
-    public hasSelection(cards: string[], hook: IDataHook): boolean {
-        const selection = this.getSelection(hook);
-        return (
-            cards.length > 0 &&
-            selection.length == cards.length &&
-            cards.reduce((same, card, i) => same && card == selection[i], true)
-        );
-    }
-
     // Setters
     /**
      * Sets the name of the player
@@ -125,14 +118,5 @@ export class Player extends SocketModel {
      */
     public async setName(name: string): Promise<ISocketResponse> {
         return this.name.set(name);
-    }
-
-    /**
-     * Sets the selection of the player
-     * @param selection The selection
-     * @returns The response of the server
-     */
-    public async setSelection(selection: string[]): Promise<ISocketResponse> {
-        return this.selection.set(selection);
     }
 }
