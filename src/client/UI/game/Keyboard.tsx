@@ -85,6 +85,7 @@ export const Keyboard: FC<{
                 flexDirection: "column",
                 gap: isMobile ? theme.spacing.s2 : theme.spacing.s1,
                 opacity: disabled ? 0.5 : 1,
+                transition: "opacity 0.25s linear",
             }}
             {...rest}>
             {layout.map((row, i) => {

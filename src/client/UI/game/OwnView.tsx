@@ -14,6 +14,7 @@ export const OwnView: FC = () => {
     const {attempts, wordList} = room.getSettings(h);
     const wordLength = wordList[0].length ?? 6;
     const isChooser = room.getChooser(h)?.getID() == me?.getID();
+    const waiting = room.getStatus(h) == "waiting";
 
     const [isShaking, setShaking] = useState(false);
     const shake = useCallback(() => {
@@ -55,7 +56,6 @@ export const OwnView: FC = () => {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
-                transition: "opacity 1s linear",
             }}>
             <div
                 css={{
@@ -77,7 +77,7 @@ export const OwnView: FC = () => {
                 <Keyboard
                     player={me}
                     onPress={processKey}
-                    disabled={isChooser}
+                    disabled={isChooser || waiting}
                     css={{marginBottom: 20}}
                 />
             </div>

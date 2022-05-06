@@ -22,8 +22,10 @@ export const Attempts: FC<{
     const maxAttempts = settings.attempts;
     const wordLength = settings.wordList[0]?.length ?? 6;
     const attempts = player.getAttempts(wordLength, h);
+    const waiting = room.getStatus(h) == "waiting";
 
     const isChooser = room.getChooser(h)?.getID() == player.getID();
+    const disabled = isChooser || waiting;
 
     const [scrollRef, smoothScroll] = useSmoothScroll();
     const ref = useRef<HTMLDivElement>();
@@ -45,6 +47,11 @@ export const Attempts: FC<{
         [smoothScroll]
     );
 
+    const hasAttempts = attempts.length > 0;
+    useEffect(() => {
+        if (!hasAttempts) smoothScroll({top: 0});
+    }, [hasAttempts]);
+
     const theme = useTheme();
     const width = {
         normal: 300,
@@ -58,7 +65,8 @@ export const Attempts: FC<{
         <div
             ref={setRef}
             css={{
-                opacity: isChooser ? 0.5 : 1,
+                opacity: disabled ? 0.5 : 1,
+                transition: "opacity 0.25s linear",
                 display: "flex",
                 flexDirection: "column",
                 gap: size == "extraSmall" ? 4 : theme.spacing.s1,
