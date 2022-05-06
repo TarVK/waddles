@@ -74,7 +74,12 @@ export const OwnView: FC = () => {
                 <div css={{display: "flex", justifyContent: "center", ">*": {flex: 1}}}>
                     <Attempts player={me} resize={true} shake={isShaking} />
                 </div>
-                <Keyboard player={me} onPress={processKey} disabled={isChooser} />
+                <Keyboard
+                    player={me}
+                    onPress={processKey}
+                    disabled={isChooser}
+                    css={{marginBottom: 20}}
+                />
             </div>
         </div>
     );

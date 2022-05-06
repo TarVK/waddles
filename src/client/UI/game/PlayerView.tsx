@@ -16,12 +16,12 @@ export const PlayerView: FC<{
                 <Attempts player={player} size={size} />
                 {extended ? (
                     <Fragment>
-                        {size == "normal" && <div css={{height: 51}} />}
+                        {size == "normal" && <div css={{height: 61}} />}
                         {<PlayerComp player={player} />}
-                        {size == "normal" && <div css={{height: 50}} />}
+                        {size == "normal" && <div css={{height: 60}} />}
                     </Fragment>
                 ) : size == "normal" ? (
-                    <div css={{height: 170}} />
+                    <div css={{height: 190}} />
                 ) : undefined}
             </div>
         </div>

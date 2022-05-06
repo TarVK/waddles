@@ -8,6 +8,7 @@ import {useTheme} from "../../services/useTheme";
 import {Application} from "../../model/Application";
 import {gameColors} from "../../theme";
 import {keyboardLayout} from "../../services/keyboardLayout";
+import {useIsMobileView} from "../../services/useIsMobileView";
 
 const statusRanking: Record<ICharStatus, number> = {
     unknown: 0,
@@ -20,7 +21,7 @@ export const Keyboard: FC<{
     player: Player;
     onPress?: (key: IKey) => void;
     disabled?: boolean;
-}> = ({player, onPress, disabled}) => {
+}> = ({player, onPress, disabled, ...rest}) => {
     const [h] = useDataHook();
     const {layout} = keyboardLayout.get(h);
 
@@ -74,15 +75,18 @@ export const Keyboard: FC<{
         return remaining;
     }, [layout]);
 
+    const isMobile = useIsMobileView();
+
     const theme = useTheme();
     return (
         <div
             css={{
                 display: "flex",
                 flexDirection: "column",
-                gap: theme.spacing.s1,
+                gap: isMobile ? theme.spacing.s2 : theme.spacing.s1,
                 opacity: disabled ? 0.5 : 1,
-            }}>
+            }}
+            {...rest}>
             {layout.map((row, i) => {
                 const filler = layoutFillers[i];
 
@@ -93,7 +97,9 @@ export const Keyboard: FC<{
                             display: "flex",
                             justifyContent: "center",
                             "> button": {
-                                marginRight: theme.spacing.s1,
+                                marginRight: isMobile
+                                    ? theme.spacing.s2
+                                    : theme.spacing.s1,
                                 "&:last-of-type": {
                                     marginRight: 0,
                                 },

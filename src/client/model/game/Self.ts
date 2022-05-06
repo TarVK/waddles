@@ -42,6 +42,9 @@ export class Self extends Player {
     public static async create(ID: string): Promise<Self> {
         const player = new Self(ID);
         await player.initialize();
+        const name = localStorage.getItem("username");
+        console.log(name);
+        if (name) player.setName(name);
         return player;
     }
 

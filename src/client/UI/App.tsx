@@ -17,7 +17,7 @@ import {PlayerViews} from "./game/PlayerViews";
 import {RoundWinScreen} from "./controls/RoundWinScreen";
 import {MatchWinScreen} from "./controls/MatchWinScreen";
 import {EnterWordScreen} from "./controls/EnterWordScreen";
-import {Github} from "../components/Github";
+import {Footer} from "./Footer";
 
 export const App: FC = () => {
     const [h, c] = useDataHook();
@@ -86,7 +86,14 @@ export const App: FC = () => {
                     onRenderNavigation={() => <div />}
                     styles={{
                         main: {backgroundColor: theme.palette.themeLight},
-                        content: {padding: 0},
+                        contentInner: {flex: 1},
+                        scrollableContent: {height: "100%"},
+                        content: {
+                            padding: 0,
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "100%",
+                        },
                         commands: {margin: 0},
                     }}
                     onDismiss={() => setMenuOpen(false)}>
@@ -100,7 +107,7 @@ export const App: FC = () => {
                     <div css={{flexGrow: 1}}>
                         <PlayerList />
                     </div>
-                    <Github />
+                    <Footer />
                 </Panel>
             </DefaultLoaderSwitch>
         );
@@ -150,7 +157,7 @@ export const App: FC = () => {
                     <div css={{flexGrow: 1}}>
                         <PlayerList />
                     </div>
-                    <Github />
+                    <Footer />
                 </Surface>
             </div>
         </DefaultLoaderSwitch>

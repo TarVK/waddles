@@ -302,7 +302,8 @@ export class Room {
             this.setState({
                 round,
                 status: "choosingWord",
-                chooserID: chooser?.getID(),
+                chooserID:
+                    this.settings.wordMode == "entered" ? chooser?.getID() : undefined,
             });
         } else {
             const words = this.settings.wordList;

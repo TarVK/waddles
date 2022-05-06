@@ -52,7 +52,13 @@ export const SettingsModal: FC = () => {
                 isOpen={isOpen}
                 onDismiss={() => setOpen(false)}
                 styles={{main: {padding: theme.spacing.s1, width: 800}}}>
-                <div css={{display: "flex", maxHeight: "90vh", flexDirection: "column"}}>
+                <div
+                    css={{
+                        display: "flex",
+                        maxHeight: "90vh",
+                        flexDirection: "column",
+                        marginBottom: 2,
+                    }}>
                     <div css={{display: "flex", alignItems: "flex-end"}}>
                         <Title css={{flexGrow: 1}}>Room settings</Title>
                         <IconButton

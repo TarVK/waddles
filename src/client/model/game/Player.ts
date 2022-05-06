@@ -117,6 +117,7 @@ export class Player extends SocketModel {
      * @returns The response of the server
      */
     public async setName(name: string): Promise<ISocketResponse> {
+        localStorage.setItem("username", name);
         return this.name.set(name);
     }
 }

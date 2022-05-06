@@ -28,7 +28,7 @@ export const RoomData: FC = () => {
                     justifyContent: "space-between",
                     alignItems: "center",
                 }}>
-                <div>Round: {round}</div>
+                <div>Round {round}</div>
                 {isAdmin &&
                     (isGameGoing ? (
                         <DefaultButton onClick={startGame}>Restart</DefaultButton>

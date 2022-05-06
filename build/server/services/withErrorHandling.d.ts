@@ -4,4 +4,4 @@ import { IError } from "../../_types/game/IError";
  * @param func The function to execute
  * @returns The result of the function, or a generic error code
  */
-export declare const withErrorHandling: <T>(func: () => T) => T | IError;
+export declare const withErrorHandling: <T>(func: () => T) => IError | T;

@@ -228,7 +228,7 @@ class Room {
             this.setState({
                 round,
                 status: "choosingWord",
-                chooserID: chooser === null || chooser === void 0 ? void 0 : chooser.getID(),
+                chooserID: this.settings.wordMode == "entered" ? chooser === null || chooser === void 0 ? void 0 : chooser.getID() : undefined,
             });
         }
         else {

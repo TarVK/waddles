@@ -4,7 +4,7 @@
 
 A useful location to find wordlists: https://github.com/gmelodie/awesome-wordlists
 
-## [Xajkep's Wordlists](https: //github.com/xajkep/wordlists)
+## [Xajkep's Wordlists](https://github.com/xajkep/wordlists)
 
 Thanks to the dictionaries provided on this github page we created (with regex) word lists below:
 
