@@ -137,7 +137,7 @@ export const Key: FC<{
         <button
             css={{
                 background: "none",
-                color: "inherit",
+                color: status != "unknown" ? "#ffffff" : "inherit",
                 border: "none",
                 padding: 0,
                 cursor: disabled ? undefined : "pointer",

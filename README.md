@@ -5,7 +5,7 @@ You know? Waddles. The online PvP wordle game, playable at [waddles.herokuapp.co
 ![Banner]("/../documentation/screenshots/desktop.png)
 
 This game supports a variety of settings, explained in the [settings section](#settings) and supports 2+ player PvP.
-This game was made within a day as a challenge (and because I didn't want to waste too much time on it) by adapting my previous game [themCards](https://github.com/TarVK/themCards).
+This game was made within a day as a challenge (and because I didn't want to waste too much time on it) by adapting my previous game [themCards](https://github.com/TarVK/themCards). Several minor improvements and bug fixes were made after this initial day to improve user experience however.
 
 ## Gameplay
 

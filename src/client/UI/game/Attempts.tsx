@@ -161,7 +161,12 @@ export const Attempt: FC<{
                             alignItems: "center",
                             justifyContent: "center",
                             backgroundColor: gameColors[type] ?? undefined,
-                            color: showIndex ? "#dddddd" : undefined,
+                            color:
+                                type == "unknown"
+                                    ? showIndex
+                                        ? "#dddddd"
+                                        : undefined
+                                    : "#ffffff",
                             "&.shake": {
                                 animation: `${shakeAnimation} 0.3s ease`,
                             },
