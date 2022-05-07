@@ -6,13 +6,15 @@ import {Keyboard} from "./Keyboard";
 import {Attempts} from "./Attempts";
 import {IKey} from "./_types/IKeyLayout";
 import {useTheme} from "../../services/useTheme";
+import {getWordLength} from "../../services/lists/getWordLength";
+import {hasWord} from "../../services/lists/hasWord";
 
 export const OwnView: FC = () => {
     const [h] = useDataHook();
     const me = Application.getPlayer(h)!;
     const room = Application.getRoom(h)!;
     const {attempts, wordList} = room.getSettings(h);
-    const wordLength = wordList[0].length ?? 6;
+    const wordLength = getWordLength(room, h);
     const isChooser = room.getChooser(h)?.getID() == me?.getID();
     const waiting = room.getStatus(h) == "waiting";
 
@@ -34,7 +36,7 @@ export const OwnView: FC = () => {
                 }
                 if (me.getAttempts(wordLength, null).length > attempts) return;
 
-                if (!wordList.includes(guess)) {
+                if (!hasWord(wordList, guess)) {
                     shake();
                     return;
                 }

@@ -21,8 +21,8 @@ export const RoundWinScreen: FC = () => {
 
     useEffect(() => {
         if (!visible) {
-            setTimeout(() => setPrevWinner(null), 2000);
-            setTimeout(() => setPrevWord(null), 2000);
+            setTimeout(() => setPrevWinner(null), 500);
+            setTimeout(() => setPrevWord(null), 500);
         }
     }, [visible]);
     useEffect(() => {

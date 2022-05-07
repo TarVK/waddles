@@ -9,6 +9,7 @@ import {Application} from "../../model/Application";
 import {gameColors} from "../../theme";
 import {keyboardLayout} from "../../services/keyboardLayout";
 import {useIsMobileView} from "../../services/useIsMobileView";
+import {getWordLength} from "../../services/lists/getWordLength";
 
 const statusRanking: Record<ICharStatus, number> = {
     unknown: 0,
@@ -25,8 +26,7 @@ export const Keyboard: FC<{
     const [h] = useDataHook();
     const {layout} = keyboardLayout.get(h);
 
-    const settings = Application.getRoom(h)!.getSettings(h);
-    const wordLength = settings.wordList[0]?.length ?? 6;
+    const wordLength = getWordLength(Application.getRoom(h)!, h);
     const attempts = player.getAttempts(wordLength, h);
 
     useEffect(() => {

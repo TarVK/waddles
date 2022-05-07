@@ -83,7 +83,11 @@ These word lists are obtained from public sources, and aren't perfect. For this 
 ["word1", "word2", "word3"]
 ```
 
-Each of these words should have the exact same length, and the UI may not work well for words of more than 7 characters.
+Each of these words should have the exact same length, and the UI may not work well for words of more than 7 characters. Words may be prefixed with a `.` to make them valid guessing words, but not be randomly chosen as the target word. E.g.:
+
+```json
+["words", ".deice"]
+```
 
 ![Custom word list upload]("/../documentation/screenshots/desktopUploadWords.png)
 
@@ -145,7 +149,6 @@ Any contributions are appreciated, E.G.:
     -   Game modes, E.g. turn based versus mode
     -   Start countdown
     -   Prioritized word lists (such that you don't get as many weird words)
-    -   Separated word guess list and word target lists, such that you can guess weird words but weird words are never chosen
     -   Allow word lists with words of different lengths
     -   ... any number of things that I can't think of
 -   Improvement of the design of the site

@@ -89,8 +89,11 @@ export function getWordLists(): IWordListSource[] {
                     typeof name == "string" &&
                     typeof description == "string"
                 ) {
+                    const wordLength = list[0].length - (list[0][0] == "." ? 1 : 0);
                     const areAllWords = list.every(
-                        word => typeof word == "string" && word.length == list[0].length
+                        word =>
+                            typeof word == "string" &&
+                            word.length - (word[0] == "." ? 1 : 0) == wordLength
                     );
                     if (areAllWords)
                         customLists.push({

@@ -9,6 +9,7 @@ import {useTheme} from "../../services/useTheme";
 import {IViewSize} from "./_types/IViewSize";
 import {useSmoothScroll} from "../../services/useSmoothScroll";
 import {gameColors} from "../../theme";
+import {getWordLength} from "../../services/lists/getWordLength";
 
 export const Attempts: FC<{
     player: Player;
@@ -20,7 +21,7 @@ export const Attempts: FC<{
     const room = Application.getRoom(h)!;
     const settings = room.getSettings(h);
     const maxAttempts = settings.attempts;
-    const wordLength = settings.wordList[0]?.length ?? 6;
+    const wordLength = getWordLength(room, h);
     const attempts = player.getAttempts(wordLength, h);
     const waiting = room.getStatus(h) == "waiting";
 

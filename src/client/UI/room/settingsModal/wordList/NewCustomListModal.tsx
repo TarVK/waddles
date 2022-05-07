@@ -36,8 +36,11 @@ export const NewCustomListModal: FC<{isOpen: boolean; onClose: () => void}> = ({
             const text = await file.text();
             try {
                 const list = JSON.parse(text) as string[];
+                const wordLength = list[0].length - (list[0][0] == "." ? 1 : 0);
                 const sameLength = list.every(
-                    word => typeof word == "string" && word.length == list[0].length
+                    word =>
+                        typeof word == "string" &&
+                        word.length - (word[0] == "." ? 1 : 0) == wordLength
                 );
                 if (!sameLength) throw "Different lengths";
 

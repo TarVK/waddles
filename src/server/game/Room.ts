@@ -306,7 +306,7 @@ export class Room {
                     this.settings.wordMode == "entered" ? chooser?.getID() : undefined,
             });
         } else {
-            const words = this.settings.wordList;
+            const words = this.settings.wordList.filter(word => word[0] != ".");
             const index = Math.floor(Math.random() * words.length);
             this.setWord(words[index], round);
         }
@@ -363,7 +363,9 @@ export class Room {
                             Infinity
                         );
                         const playersWithMinGuesses = this.players.filter(
-                            player => player.getAttempts().length == minGuesses
+                            player =>
+                                player.guessedWord() &&
+                                player.getAttempts().length == minGuesses
                         );
                         if (playersWithMinGuesses.length == 1)
                             winner = playersWithMinGuesses[0];

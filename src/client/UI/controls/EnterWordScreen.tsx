@@ -5,6 +5,7 @@ import {useTheme} from "../../services/useTheme";
 import {Application} from "../../model/Application";
 import {useDataHook} from "model-react";
 import {TextField} from "../../components/TextField";
+import {hasWord} from "../../services/lists/hasWord";
 
 export const EnterWordScreen: FC = () => {
     const theme = useTheme();
@@ -21,7 +22,7 @@ export const EnterWordScreen: FC = () => {
     const [word, setWord] = useState("");
 
     const submit = useCallback(() => {
-        if (!words.includes(word)) {
+        if (!hasWord(words, word)) {
             setInvalidWord(true);
         } else {
             setInvalidWord(false);
