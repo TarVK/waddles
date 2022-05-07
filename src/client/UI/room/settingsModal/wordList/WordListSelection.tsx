@@ -31,6 +31,10 @@ export const WordListSelection: FC = () => {
             </Title>
             <SearchBox
                 placeholder="Search"
+                css={{
+                    marginLeft: theme.spacing.s1,
+                    marginRight: theme.spacing.s1,
+                }}
                 underlined
                 value={search}
                 onChange={(e, v) => v !== undefined && setSearch(v)}
@@ -45,7 +49,7 @@ export const WordListSelection: FC = () => {
                 data-is-scrollable={true}>
                 {availableLists
                     .filter(({name, description}) =>
-                        (name + description).includes(search)
+                        (name + description).toLowerCase().includes(search)
                     )
                     .map(source => (
                         <WorldList key={source.name} source={source} />

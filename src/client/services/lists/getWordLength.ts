@@ -8,7 +8,7 @@ import {IDataHook} from "model-react";
  * @returns The word length
  */
 export function getWordLength(room: Room, hook: IDataHook): number {
-    const wordList = room.getSettings(hook);
+    const {wordList} = room.getSettings(hook);
     const first = wordList[0];
     if (!first) return 5;
     if (first[0] == ".") return first.length - 1;

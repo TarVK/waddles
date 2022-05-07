@@ -1,4 +1,4 @@
-import {jsx, keyframes} from "@emotion/core";
+import {jsx, keyframes, CSSObject} from "@emotion/core";
 import {Player} from "../../model/game/Player";
 import {FC, Fragment, useEffect, useRef, useCallback} from "react";
 import {useDataHook} from "model-react";
@@ -10,6 +10,7 @@ import {IViewSize} from "./_types/IViewSize";
 import {useSmoothScroll} from "../../services/useSmoothScroll";
 import {gameColors} from "../../theme";
 import {getWordLength} from "../../services/lists/getWordLength";
+import {ITheme} from "@fluentui/react";
 
 export const Attempts: FC<{
     player: Player;
@@ -81,6 +82,8 @@ export const Attempts: FC<{
                 overflow: "auto",
                 padding: 2,
                 width: resize ? undefined : width,
+
+                ...customScrollbar(theme),
             }}>
             {genList(
                 maxAttempts > attemptBarrier
@@ -184,3 +187,21 @@ const shakeAnimation = keyframes`
     transform: scale(85%);
   }  
 `;
+
+const customScrollbar = (theme: ITheme): CSSObject => ({
+    /* width */
+    "&::-webkit-scrollbar": {
+        width: 10,
+    },
+
+    /* Handle */
+    "&::-webkit-scrollbar-thumb": {
+        borderLeft: "2px solid white",
+        background: theme.palette.neutralLight,
+    },
+
+    /* Handle on hover */
+    "&::-webkit-scrollbar-thumb:hover": {
+        background: theme.palette.neutralDark,
+    },
+});

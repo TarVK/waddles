@@ -43,7 +43,6 @@ export class Self extends Player {
         const player = new Self(ID);
         await player.initialize();
         const name = localStorage.getItem("username");
-        console.log(name);
         if (name) player.setName(name);
         return player;
     }

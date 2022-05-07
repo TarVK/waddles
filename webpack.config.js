@@ -19,6 +19,7 @@ module.exports = env => ({
         compress: true,
         port: 3000,
         historyApiFallback: true,
+        disableHostCheck: true, // For ngrok testing
     },
     resolve: {
         extensions: [".tsx", ".ts", ".js"],

@@ -15,14 +15,10 @@ Thanks to the dictionaries provided on this github page we created (with regex) 
 -   5-letter-dutch.json
 -   5-letter-german.json
 
-## [PowerLanguage's Wordlists](https://github.com/powerlanguage/word-lists/)
+## [Dolph's popular english words list](https://github.com/dolph/dictionary)
 
-Thanks to the word lists on this page we created word lists below:
+Thanks to the dictionaries provided on this github page, together with Xajkep's English wordlist we created (with regex) word lists below:
 
--   7-letter-words.json
-
-## [Emma.ca's Name lists](https://emma.ca/)
-
-Thanks to the word lists on this page we created word lists below:
-
--   [5-letter-english-names](https://emma.ca/baby-boy-names/5-letters)
+-   5-letter-english
+-   6-letter-english
+-   7-letter-english

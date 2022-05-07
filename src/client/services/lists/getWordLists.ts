@@ -4,12 +4,6 @@ import {fetchWordList} from "./fetchWordList";
 export function getWordLists(): IWordListSource[] {
     const defaultLists: IWordListSource[] = [
         {
-            name: "English-5 wordle",
-            description: "English 5 letter words used by wordle",
-            isCustom: false,
-            get: () => fetchWordList("5-letter-english-wordle"),
-        },
-        {
             name: "English-5",
             description: "English 5 letter words",
             isCustom: false,
@@ -26,18 +20,6 @@ export function getWordLists(): IWordListSource[] {
             description: "English 7 letter words",
             isCustom: false,
             get: () => fetchWordList("7-letter-english"),
-        },
-        {
-            name: "English-5 names",
-            description: "English 5 letter names",
-            isCustom: false,
-            get: () => fetchWordList("5-letter-english-names"),
-        },
-        {
-            name: "English-5 with names",
-            description: "English 5 letter words and names",
-            isCustom: false,
-            get: () => fetchWordList("5-letter-english-with-names"),
         },
         {
             name: "Dutch-5",

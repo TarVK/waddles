@@ -51,7 +51,13 @@ export const SettingsModal: FC = () => {
             <Modal
                 isOpen={isOpen}
                 onDismiss={() => setOpen(false)}
-                styles={{main: {padding: theme.spacing.s1, width: 800}}}>
+                styles={{
+                    main: {padding: theme.spacing.s1, width: 800, overflow: "visible"},
+                    scrollableContent: {
+                        // Fix for scrolling not working on phone, caused by this change: https://github.com/microsoft/fluentui/pull/8568
+                        maxHeight: window.innerHeight - 60,
+                    },
+                }}>
                 <div
                     css={{
                         display: "flex",
@@ -86,6 +92,9 @@ export const SettingsModal: FC = () => {
                         />
                         <Toggle
                             label="Private room"
+                            css={{
+                                marginRight: theme.spacing.s1,
+                            }}
                             checked={room?.isPrivate(h) || false}
                             disabled={!isAdmin}
                             onChange={(e, v) => {
@@ -228,7 +237,11 @@ export const SettingsModal: FC = () => {
                     <Title css={{marginTop: theme.spacing.m}}>Keyboard layout</Title>
 
                     <Dropdown
-                        css={{flex: 1}}
+                        css={{
+                            flex: 1,
+                            marginLeft: theme.spacing.s1,
+                            marginRight: theme.spacing.s1,
+                        }}
                         placeholder="Select a keyboard layout"
                         label="Keyboard layout"
                         selectedKey={keyboardLayout.get(h).name}
