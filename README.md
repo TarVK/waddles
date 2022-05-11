@@ -1,6 +1,6 @@
 # waddles
 
-You know? Waddles. The online PvP wordle game, playable at [waddles.herokuapp.com](https://waddles.herokuapp.com).
+You know? Waddles. The online PvP [wordle](https://www.nytimes.com/games/wordle/index.html) game, playable at [waddles.herokuapp.com](https://waddles.herokuapp.com).
 
 ![Banner]("/../documentation/screenshots/desktop.png)
 
